@@ -24,3 +24,5 @@ You can submit your code via a zip file or a link to a git repository. Please in
 
 ## 5. Other
 The ZED SDK depends on an nvidia GPU. If you don't have one, you can still use opencv `VideoCapture` to read the SVO file. However, you won't be able to get the depth data to obtain final belt speed. Implement the part you can do and explain how you would implement the rest with depth data available, at least you should report some speed value in pixel unit.
+
+If you have any other questions, create an issue. 
