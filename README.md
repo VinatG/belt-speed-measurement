@@ -72,12 +72,12 @@ The following key statistics were derived from the processed speed data of the c
 ### Visualizations
 
 #### Boxplot
-![Boxplot of Smoothed Speeds](boxplot_speeds.png)
+![Boxplot of Smoothed Speeds](assets/boxplot_speeds.png)
 
 The boxplot illustrates the spread of the conveyor belt speeds, highlighting the interquartile range (IQR) and median speed. Notably, several outliers are observed beyond the upper whisker limit, which indicates occasional deviations or anomalies in the conveyor belt's operation.
 
 #### Histogram
-![Histogram of Smoothed Speeds](histogram_speeds.png)
+![Histogram of Smoothed Speeds](assets/histogram_speeds.png)
 
 The histogram shows a unimodal distribution of speeds, with the majority of speeds concentrated between **1800 mm/s** and **2000 mm/s**, and a gradual tapering off for higher speeds. The slight positive skew reflects occasional instances of higher speeds, aligning with the outliers seen in the boxplot.
 
