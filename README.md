@@ -18,10 +18,13 @@ The left camera view is extracted and polygon masking is applied to isolate the 
 ### 3.3 Feature Detection and Matching:
 Keypoints are detected using the SIFT algorithm, and high-confidence matches are filtered using FLANN with Lowe’s ratio test.
 
-### 3.4 Speed Calculation:
+### 3.4 Direction Detection:
+The direction of the rock movement is determined using the depth and feature flow patterns.
+
+### 3.5 Speed Calculation:
 Real-world displacement is calculated by mapping image coordinates to real-world measurements using camera calibration parameters. Speed is estimated by combining displacement and frame rate.
 
-### 3.5 Noise Mitigation:
+### 3.6 Noise Mitigation:
 A Kalman Filter smoothens the speed readings by reducing noise and improving accuracy through predictive adjustments.
 
 For more details about the approach, please refer to the [report.pdf](./report.pdf)  file available in this repository.
