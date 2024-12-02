@@ -45,7 +45,7 @@ pip install -r requirements.txt
 ```
 5. Run the script
 ```
-python main.py
+python main.py --number-of-features 500 --fps 60 --const 0.7 --visualize --output-csv-file-path speeds.csv
 ```
 6. Visualize the log files
 ```
