@@ -27,10 +27,9 @@ if sdk_version.split(".")[0] != "4":
 # Left view region of interest belt polygon 
 LEFT_BELT_POLYGON = np.array([[415, 720.00], [462, 0.00], [753, 0.00], [890, 720.00]], np.int32)
 
-
 # Kalman Filter Class
 class KalmanFilter:
-    def __init__(self, process_var = 1e-2, measurement_var = 1e-1, initial_value = 0):
+    def __init__(self, process_var = 1e-3, measurement_var = 1e-1, initial_value = 0): # 1e-2 1e-1
         self.process_var = process_var
         self.measurement_var = measurement_var
         self.estimate = initial_value
@@ -120,6 +119,83 @@ def detect_belt_direction(keypoints_prev, keypoints_curr, good_matches):
         direction = "Down" if avg_flow_y > 0 else "Up"
     return direction
 
+# Function to visualize matched features on the current frame
+def visualize_feature_matching_on_current_frame(curr_frame, keypoints_prev, keypoints_curr, good_matches):
+    vis_frame = curr_frame.copy()
+
+    # Draw matched features and lines connecting previous and current features
+    for match in good_matches:
+        idx_prev = match.queryIdx
+        idx_curr = match.trainIdx
+
+        pt_prev = keypoints_prev[idx_prev].pt  # Coordinates of the feature in the previous frame
+        pt_curr = keypoints_curr[idx_curr].pt  # Coordinates of the feature in the current frame
+
+        cv2.circle(vis_frame, (int(pt_curr[0]), int(pt_curr[1])), radius = 5, color = (0, 255, 0), thickness = -1)  
+        cv2.circle(vis_frame, (int(pt_prev[0]), int(pt_prev[1])), radius = 5, color = (255, 0, 0), thickness = -1)  
+
+        # Draw a line connecting the features
+        cv2.line(vis_frame, (int(pt_prev[0]), int(pt_prev[1])), (int(pt_curr[0]), int(pt_curr[1])), color = (255, 255, 0), thickness = 2)
+    
+    cv2.imshow("Feature Matching Visualization", vis_frame)
+    cv2.waitKey(1)
+
+# Function to filter matches using the belt direction using flow
+def filter_matches_by_direction(keypoints_prev, keypoints_curr, good_matches, direction_threshold = 0.8):
+    flow_vectors = []
+    for match in good_matches:
+        idx1 = match.queryIdx
+        idx2 = match.trainIdx
+        p1 = keypoints_prev[idx1].pt
+        p2 = keypoints_curr[idx2].pt
+        flow_vectors.append((p2[0] - p1[0], p2[1] - p1[1]))
+
+    # Compute average flow vector
+    avg_flow_vector = np.mean(flow_vectors, axis=0)
+    avg_flow_norm = np.linalg.norm(avg_flow_vector)
+
+    if avg_flow_norm == 0:
+        return good_matches  # No filtering if no clear direction is present
+
+    filtered_matches = []
+    for match, flow in zip(good_matches, flow_vectors):
+        flow_norm = np.linalg.norm(flow)
+        if flow_norm == 0:
+            continue
+        cosine_similarity = np.dot(flow, avg_flow_vector) / (flow_norm * avg_flow_norm)
+        if cosine_similarity >= direction_threshold:  
+            filtered_matches.append(match)
+
+    return filtered_matches
+
+# Function to filter the matches based on the displacement magnitude using IQR
+def filter_matches_by_iqr(keypoints_prev, keypoints_curr, good_matches):
+    # Compute displacement magnitudes for all matches
+    displacements = []
+    for match in good_matches:
+        idx1 = match.queryIdx
+        idx2 = match.trainIdx
+        p1 = keypoints_prev[idx1].pt
+        p2 = keypoints_curr[idx2].pt
+        displacement = np.linalg.norm(np.array(p2) - np.array(p1))
+        displacements.append(displacement)
+    
+    # Calculate the IQR and remove the outliers
+    displacements = np.array(displacements)
+    q1 = np.percentile(displacements, 25)  
+    q3 = np.percentile(displacements, 75) 
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+
+    # Filter matches
+    filtered_matches = []
+    for match, displacement in zip(good_matches, displacements):
+        if lower_bound <= displacement <= upper_bound:
+            filtered_matches.append(match)
+    
+    return filtered_matches
+
 def main(args):
     FPS = args.fps
     
@@ -164,8 +240,11 @@ def main(args):
             # Match features in the left frame
             keypoints_prev, keypoints_curr, good_matches = find_features(args, feature_extractor, prev_left_frame, curr_left_gray, LEFT_BELT_POLYGON)
 
+            # Apply IQR-based filtering to the matches
+            filtered_matches = filter_matches_by_iqr(keypoints_prev, keypoints_curr, good_matches)
+
             actual_coordinates = [] # List to store the actual coordinates(real world coordinates)
-            for match in good_matches:
+            for match in filtered_matches:
                 idx1 = match.queryIdx
                 idx2 = match.trainIdx
                 p1 = keypoints_prev[idx1].pt
@@ -177,7 +256,7 @@ def main(args):
                     world_p2 = image_to_world(p2[0], p2[1], z2, fx, fy, cx, cy)
                     actual_coordinates.append((world_p1, world_p2))
 
-            time_delta = 1 / FPS  # Use FPS for consistent time delta
+            time_delta = 1 / FPS # Use FPS for consistent time delta
             direction = detect_belt_direction(keypoints_prev, keypoints_curr, good_matches)
 
             speed_left = calculate_speed(actual_coordinates, time_delta)
@@ -185,14 +264,17 @@ def main(args):
 
             print(f"Timestamp: {timestamp} ms, Smoothed Speed: {smoothed_speed:.2f} mm/s, Direction: {direction}")
             speeds_data.append({"Timestamp (ms)": timestamp, "Smoothed Speed (mm/s)": smoothed_speed})
-            if args.visualize:
+
+            if args.debug_feature_matching:
+                visualize_feature_matching_on_current_frame(curr_left_frame, keypoints_prev, keypoints_curr, filtered_matches)
+            elif args.visualize:
                 visualize(curr_left_frame, LEFT_BELT_POLYGON, keypoints_curr, smoothed_speed, direction)
 
         prev_left_frame = curr_left_gray
-
+        
     # Save speeds data to a CSV
     speeds_df = pd.DataFrame(speeds_data)
-    speeds_df.to_csv(args.output_csv_file_path, index = False)
+    speeds_df.to_csv(args.output_csv_file_path, index=False)
     print("Speeds Log saved successfully")
 
     cam.close()
@@ -200,11 +282,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--number-of-features", type = int, default = 500, help = "Number of features to be used for the feature detector")
+    parser.add_argument("--number-of-features", type = int, default = 500, help = "Number of features for the detector")
     parser.add_argument("--fps", type = int, default = 60, help = "FPS of the input video")
     parser.add_argument("--const", type = float, default = 0.7, help = "Lowe's ratio test threshold")
-    parser.add_argument("--visualize", action = "store_true", help = "If set, the results are visualized")
-    parser.add_argument("--output-csv-file-path", type = str, required = True, help = "Path to the output csv file path containing the speed logs")
+    parser.add_argument("--visualize", action = "store_true", help = "Visualize regular results")
+    parser.add_argument("--debug-feature-matching", action = "store_true", help = "Visualize feature matching for debugging")
+    parser.add_argument("--output-csv-file-path", type = str, required = True, help = "Path to the output CSV file")
 
     args = parser.parse_args()
     main(args)

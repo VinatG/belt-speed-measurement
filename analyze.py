@@ -11,7 +11,7 @@ def calculate_stats(speeds):
     return stats
 
 # Load the data
-file_path = "speeds.csv"  # Path to the csv file
+file_path = "newwwww_speeds.csv"  # Path to the csv file
 data = pd.read_csv(file_path)
 
 column_name = "Smoothed Speed (mm/s)"
