@@ -57,15 +57,15 @@ python analyze_log_file.py
 ### Statistical Analysis Results
 The following key statistics were derived from the processed speed data of the conveyor belt:
 
-- **Mean**: 1892.56 mm/s  
-- **Median**: 1821.12 mm/s  
-- **Standard Deviation**: 406.46 mm/s  
-- **1st Quartile (25%)**: 1616.19 mm/s  
-- **3rd Quartile (75%)**: 2085.26 mm/s  
-- **Interquartile Range (IQR)**: 469.07 mm/s  
-- **Minimum**: 1126.39 mm/s  
-- **Maximum**: 4893.18 mm/s  
-- **Count**: 1797 entries  
+- **Mean**: 1778.99 mm/s  
+- **Median**: 1708.75 mm/s  
+- **Standard Deviation**: 340.15 mm/s  
+- **1st Quartile (25%)**: 1542.68 mm/s  
+- **3rd Quartile (75%)**: 1957.31 mm/s  
+- **Interquartile Range (IQR)**: 414.63 mm/s  
+- **Minimum**: 1086.30 mm/s  
+- **Maximum**: 3668.78 mm/s  
+- **Count**: 1798 entries  
 
 ---
 
